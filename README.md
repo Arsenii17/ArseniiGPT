@@ -9,7 +9,8 @@ $ git clone https://github.com/Arsenii17/ArseniiGPT.git
 
 ```
 py -m venv myvenv
-
+```
+```
 myvenv\Scripts\activate
 ```
 
