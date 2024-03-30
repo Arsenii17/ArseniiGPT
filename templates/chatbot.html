@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<style>
+    body, html {
+      height: 100%;
+    }
+
+    .messages-box {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .messages-list {
+      padding-left: 0;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      list-style: none;
+    }
+
+    .message-text {
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .sent {
+      background-color: #dcf8c6;
+      align-self: flex-end;
+    }
+
+    .received {
+      background-color: #f1f0f0;
+      align-self: flex-start;
+    }
+
+    .message-form {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px;
+      background-color: #f8f9fa;
+    }
+
+    .message-input {
+      flex: 1;
+      border-radius: 0;
+      border-right: none;
+    }
+    .for-system-message-input{
+      width: 40%;
+    }
+    .btn-send {
+      border-radius: 0;
+    }
+
+    .chat-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+{% endblock %}
+
+
+{% block content %}
+<div class="chat-container">
+  <div class="card flex-grow-1">
+    <div class="card-header bg-primary text-white">Арсений GPT</div>
+    {% if user.is_authenticated %}
+    <div class="card-header bg-primary text-white"><b>Добро пожаловать, {{user.username}}!</b>   <a style="color: yellow;" href="logout">Выйти</a></div>
+    <div class="card-header bg-primary text-white"><a style="color: yellow;" href="clear_history">Очистить чат</a></div>
+    <div class="card-header" style="background-color: #f0f0f0;">
+    <form class="system-message-form">
+      {%csrf_token%}
+      <div>
+        <input type="text" class="for-system-message-input" placeholder="Введите ваш SystemMessage... ">
+        <button type="submit" class="btn btn-primary btn-send text-white" style="background-color: #007bff;">Отправить</button>
+        <span id="active_system_msg">Ты эмпатичный бот-психолог, готовый ответить на любые вопросы</span>
+        
+      </div>
+    </form>
+  </div>
+
+    <!-- <div class="input-group">
+      <input type="text" class="form-control for-system-message-input" placeholder="Введите ваш SystemMessage:">
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-primary btn-send">Сохранить</button>
+      </div>
+    </div> -->
+
+
+    <div class="card-body messages-box">
+      
+      <ul class="list-unstyled messages-list">
+        
+        <!-- <li class="message received">
+          <div class="message-text">
+            <div class="message-sender">
+              <b>AI Chatbot</b>
+            </div>
+            <div class="message-content">
+              Hi {{user.username}}, I am your AI Chatbot, you can ask me anything.
+            </div>
+          </div>
+        </li> -->
+
+        {% for chat in chats %}
+          {% if chat.user == request.user %}
+
+            <li class="message sent">
+          <div class="message-text">
+            <div class="message-sender">
+              <b>Вы</b>
+            </div>
+            <div class="message-content">
+              {{chat.message}}
+            </div>
+          </div>
+        </li>
+
+        <li class="message received">
+          <div class="message-text">
+            <div class="message-sender">
+              <b>AI Chatbot</b>
+            </div>
+            <div class="message-content">
+              {{chat.response}}
+            </div>
+          </div>
+        </li>
+
+          {% endif %}
+        {% endfor %}
+        
+      </ul>
+      
+    </div>
+    <br><br>
+    <br><br>
+    <br><br>
+  </div>
+  <form class="message-form">
+    {%csrf_token%}
+    <div class="input-group">
+      <input type="text" class="form-control message-input" placeholder="Введите ваше сообщение...">
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-primary btn-send">Отправить</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const messagesList = document.querySelector('.messages-list');
+  const messageForm = document.querySelector('.message-form');
+  const messageInput = document.querySelector('.message-input');
+
+  const system_messageForm = document.querySelector('.system-message-form')
+  const system_messageInput = document.querySelector('.for-system-message-input');
+
+  const active_system_msgSpan = document.getElementById('active_system_msg');
+
+  // document.getElementById("myspan").textContent="newtext";
+  system_messageForm.addEventListener('submit', (event) => { 
+    event.preventDefault();
+  
+
+
+    const system_message = system_messageInput.value.trim(); //создаем переменную message, в которой хранится текст нашего запроса trim  - обрезает пробелы и переносы строки
+    if (system_message.length === 0) {
+      return;
+    }
+
+    active_system_msgSpan.innerHTML = system_message
+    
+    fetch('', { // первый аргумент - страница куда надо переслать ('' -> 127.0.0.1:8000/)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+      body: new URLSearchParams({
+        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value, // наш токен
+
+        'system_message': system_message // передаём значение из input в формате name=value
+      })
+    })
+  });
+
+  // обработка отправки сообщений боту
+
+  messageForm.addEventListener('submit', (event) => { // обрабатываю нажатие на кнопку
+    event.preventDefault(); // чтобы не refresh страницу
+
+    const message = messageInput.value.trim(); //создаем переменную message, в которой хранится текст нашего запроса trim  - обрезает пробелы и переносы строки
+    if (message.length === 0) {
+      return;
+    }
+
+    const messageItem = document.createElement('li'); // создаем li элемент с нашгим сообщением
+    messageItem.classList.add('message', 'sent');
+    messageItem.innerHTML = `
+        <div class="message-text">
+            <div class="message-sender">
+                <b>Вы</b>
+            </div>
+            <div class="message-content">
+                ${message}
+            </div>
+        </div>`;
+    messagesList.appendChild(messageItem);
+
+    messageInput.value = '';
+    
+    // чтобы передать на бэк сообщенгие
+    fetch('', { // первый аргумент - страница куда надо переслать ('' -> 127.0.0.1:8000/)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+      body: new URLSearchParams({
+        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value, // наш токен
+
+        'message': message // передаём значение из input в формате name=value
+      })
+    })
+
+      .then(response => response.json()) // .then  обработа ответа от сервера и вывод во фронтенд результата.
+      .then(data => { //response.json() - перевожу переменную ответа от сервера в формат JSON
+        const response = data.response;
+        const messageItem = document.createElement('li');
+        messageItem.classList.add('message', 'received');
+        messageItem.innerHTML = `
+        <div class="message-text">
+            <div class="message-sender">
+              <b>Бот Арсений</b>
+            </div>
+            <div class="message-content">
+                ${response}
+            </div>
+        </div>
+          `;
+        messagesList.appendChild(messageItem);
+        // то же самое, что было с вводом сообщения на экран. Теперь с результатом
+        
+      });
+  });
+
+</script>
+{% else %}
+<div class="card-header bg-primary text-white"><a style="color: yellow" href="login">Войти</a><a style="color: yellow;margin-left: 15px;" href="register">Зарегистрироваться</a></div>
+
+{% endif %}
+
+{% endblock %}
